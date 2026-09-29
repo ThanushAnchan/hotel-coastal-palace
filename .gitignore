@@ -3,5 +3,7 @@ __pycache__/
 *.pyo
 cloudflared.exe
 WHATSAPP_LINK.txt
+*.zip
 .vscode/
 .idea/
+
