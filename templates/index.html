@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ settings.hotel_name }} | Comfortable Stays & Coastal Hospitality in Kalmadi, Malpe</title>
+  <meta name="description" content="Official website of Hotel Coastal Palace in Pandubettu, Kalmadi, Mudanidambur, Karnataka. Premium rooms, Krishna Swaad Pure Veg, and Coastal Flavours Seafood dining.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- ==========================================================================
+       NAVIGATION BAR
+       ========================================================================== -->
+  <header class="site-header" id="siteHeader">
+    <div class="container nav-container">
+      <a href="#home" class="brand-logo" id="navBrandLogo">
+        <span class="brand-title">{{ settings.hotel_name }}</span>
+        <span class="brand-subtitle">{{ settings.tagline }}</span>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav>
+        <ul class="nav-links" id="desktopNavLinks">
+          <li><a href="#home" class="nav-link active">Home</a></li>
+          <li><a href="#rooms" class="nav-link">Rooms</a></li>
+          <li><a href="#restaurant" class="nav-link">Restaurant</a></li>
+          <li><a href="#food-gallery" class="nav-link">Gallery</a></li>
+          <li><a href="#about" class="nav-link">About</a></li>
+          <li><a href="#amenities" class="nav-link">Amenities</a></li>
+          <li><a href="#location" class="nav-link">Location</a></li>
+          <li><a href="#contact" class="nav-link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button type="button" class="btn btn-primary btn-trigger-booking" id="navBookBtn">BOOK YOUR STAY</button>
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle Navigation Menu">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Drawer -->
+    <div class="mobile-nav-drawer" id="mobileNav">
+      <a href="#home" class="nav-link">Home</a>
+      <a href="#rooms" class="nav-link">Rooms</a>
+      <a href="#restaurant" class="nav-link">Restaurant</a>
+      <a href="#food-gallery" class="nav-link">Gallery</a>
+      <a href="#about" class="nav-link">About</a>
+      <a href="#amenities" class="nav-link">Amenities</a>
+      <a href="#location" class="nav-link">Location</a>
+      <a href="#contact" class="nav-link">Contact</a>
+      <button type="button" class="btn btn-primary btn-trigger-booking" style="margin-top: 0.5rem; text-align: center; width: 100%;">BOOK YOUR STAY</button>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       HERO SECTION
+       ========================================================================== -->
+  <section class="hero-section" id="home">
+    <div class="container">
+      <div class="hero-content">
+        <span class="hero-tag">WELCOME TO COMFORT</span>
+        <h1 class="hero-title">{{ settings.hotel_name }}</h1>
+        <p class="hero-subtitle">"{{ settings.tagline }}"</p>
+        
+        <div class="hero-cta-group">
+          <button type="button" class="btn btn-primary btn-trigger-booking" id="heroBookStayBtn">BOOK YOUR STAY</button>
+          <a href="#rooms" class="btn btn-outline-white" id="heroExploreRoomsBtn">EXPLORE ROOMS</a>
+          <a href="#restaurant" class="btn btn-outline-gold" id="heroExploreDiningBtn">EXPLORE RESTAURANT</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       BOOKING WIDGET (AVAILABILITY SEARCH)
+       ========================================================================== -->
+  <div class="container booking-widget-wrapper">
+    <div class="booking-widget-card" id="availabilityWidget">
+      <form class="booking-search-form" id="bookingSearchForm">
+        <div class="form-group">
+          <label for="searchCheckIn">CHECK-IN</label>
+          <input type="date" id="searchCheckIn" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="searchCheckOut">CHECK-OUT</label>
+          <input type="date" id="searchCheckOut" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="searchAdults">ADULTS</label>
+          <select id="searchAdults" class="form-control">
+            <option value="1">1 Adult</option>
+            <option value="2" selected>2 Adults</option>
+            <option value="3">3 Adults</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="searchChildren">CHILDREN</label>
+          <select id="searchChildren" class="form-control">
+            <option value="0" selected>0 Children</option>
+            <option value="1">1 Child</option>
+            <option value="2">2 Children</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-search" id="btnCheckAvailability">
+          CHECK AVAILABILITY
+        </button>
+      </form>
+      <div class="availability-alert" id="searchAlert"></div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       HOTEL / LODGE ("STAY WITH US") SECTION
+       ========================================================================== -->
+  <section class="rooms-section" id="rooms">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-tag">ACCOMMODATIONS</span>
+        <h2 class="section-title">STAY WITH US</h2>
+        <p class="section-subtitle">
+          Experience serene luxury and genuine coastal warmth. Each room is meticulously appointed with plush bedding, climate control, and modern amenities.
+        </p>
+      </div>
+
+      <div class="rooms-grid" id="roomsContainer">
+        {% for room in rooms %}
+        <div class="room-card" data-room-id="{{ room.room_id }}" id="roomCard-{{ room.room_id }}">
+          <div class="room-image-wrap">
+            <img src="{{ room.photos[0] }}" alt="{{ room.room_name }}" loading="lazy">
+            <span class="room-badge {{ room.status|lower }}">{{ room.status }}</span>
+            {% if room.feature %}
+            <span class="room-feature-tag">{{ room.feature }}</span>
+            {% endif %}
+          </div>
+          
+          <div class="room-card-body">
+            <h3 class="room-card-title">{{ room.room_name }}</h3>
+            
+            <div class="room-quick-specs">
+              <span class="spec-pill">🛏️ {{ room.bed_type }}</span>
+              <span class="spec-pill">👥 Max {{ room.maximum_guests }} Guests</span>
+              <span class="spec-pill">📶 Free Wi-Fi</span>
+              <span class="spec-pill">🛡️ {{ room.cancellation }}</span>
+            </div>
+
+            <p class="room-description-snippet">{{ room.description }}</p>
+
+            <div class="room-card-footer">
+              <div class="room-price-box">
+                <span class="room-price-val">₹{{ "{:,.0f}".format(room.price_per_night) }}</span>
+                <span class="room-price-period">per night</span>
+              </div>
+              <div class="room-card-actions">
+                <button type="button" class="btn-view-room" data-room-id="{{ room.room_id }}">VIEW ROOM</button>
+                {% if room.status == 'AVAILABLE' %}
+                <button type="button" class="btn-book-room" data-room-id="{{ room.room_id }}">BOOK NOW</button>
+                {% elif room.status == 'OCCUPIED' %}
+                <button type="button" class="btn-book-room" disabled>Currently Unavailable</button>
+                {% elif room.status == 'MAINTENANCE' %}
+                <button type="button" class="btn-book-room" disabled>Temporarily Unavailable</button>
+                {% else %}
+                <button type="button" class="btn-book-room" disabled>Unavailable</button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       RESTAURANT SECTION ("DINING AT HOTEL COASTAL PALACE")
+       ========================================================================== -->
+  <section class="restaurant-section" id="restaurant">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-tag">CULINARY EXCELLENCE</span>
+        <h2 class="section-title">DINING AT HOTEL COASTAL PALACE</h2>
+        <p class="section-subtitle">
+          Two distinctive culinary traditions curated under one roof. Savor the authentic ocean bounty at Coastal Flavours or enjoy pristine South Indian vegetarian dishes at Krishna Swaad.
+        </p>
+      </div>
+
+      <!-- Outlets Presentation -->
+      <div class="outlets-grid">
+        <div class="outlet-card">
+          <span class="outlet-tag veg">PURE VEGETARIAN</span>
+          <h3 class="outlet-title">Krishna Swaad Pure Veg</h3>
+          <div class="outlet-timing">🕒 6:30 AM – 10:30 PM · Pure Ghee Preparations</div>
+          <p class="outlet-desc">
+            Serving traditional South Indian breakfast delicacies including paper-crisp Masala Dosas, golden Medu Vadas, fluffy Poori Bhajis, Pineapple Kesari Bath, and piping hot Chikmagalur Filter Coffee.
+          </p>
+        </div>
+
+        <div class="outlet-card">
+          <span class="outlet-tag seafood">SEAFOOD SPECIALIST</span>
+          <h3 class="outlet-title">Coastal Flavours Sea Food</h3>
+          <div class="outlet-timing">🕒 11:30 AM – 11:00 PM · Fresh Malpe Catch</div>
+          <p class="outlet-desc">
+            Savor fresh coastal seafood sourced daily from the docks of Malpe. Experience signature tawa-fried anjal, spiced squid kalamari roast, Mangalorean kori sukka, neer dosa, and traditional banana leaf feasts.
+          </p>
+        </div>
+      </div>
+
+      <!-- Restaurant Interior Showcase -->
+      <div class="restaurant-hero-card" style="background: linear-gradient(rgba(10, 35, 66, 0.85), rgba(5, 19, 41, 0.92)), url('/static/images/restaurant/dining_hall_grand.jpg') center/cover no-repeat;">
+        <span class="hero-tag" style="background: rgba(255,255,255,0.15); color: #FFFFFF;">WARM AMBIENCE</span>
+        <h3 style="font-family: var(--font-serif); font-size: 2.2rem; margin-bottom: 1rem;">The Complete Family Dining Experience</h3>
+        <p style="max-width: 680px; margin: 0 auto; color: rgba(255,255,255,0.9); font-size: 1.05rem;">
+          Whether joining us for an energizing breakfast with filter coffee or an evening seafood celebration, our expansive AC dining halls with hand-crafted jali screens provide comfortable, spacious seating for families.
+        </p>
+      </div>
+
+      <!-- Restaurant Interior Gallery -->
+      <div style="margin-bottom: 4rem;">
+        <div class="text-center" style="margin-bottom: 2rem;">
+          <span class="section-tag">DINING AMBIENCE</span>
+          <h3 class="section-title" style="font-size: 1.8rem;">RESTAURANT INTERIORS</h3>
+          <p class="section-subtitle">
+            Take a look inside our grand family dining hall and comfortable booth banquettes.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+          {% for interior in restaurant.interiors %}
+          <div class="food-item-card" style="cursor: pointer;">
+            <div class="food-img-wrap" style="height: 220px;">
+              <img src="{{ interior.image }}" alt="{{ interior.title }}" loading="lazy">
+              <span class="food-badge" style="background: #0A2342; color: #FFFFFF;">Dining Ambience</span>
+            </div>
+            <div class="food-info">
+              <h4 class="food-title">{{ interior.title }}</h4>
+              <p class="food-desc">{{ interior.caption }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Food Gallery Section -->
+      <div id="food-gallery">
+        <div class="text-center" style="margin-bottom: 2.5rem;">
+          <span class="section-tag">AUTHENTIC FLAVORS</span>
+          <h3 class="section-title">OUR FOOD GALLERY</h3>
+          <p class="section-subtitle">
+            Click any photograph to view in our high-definition culinary lightbox.
+          </p>
+        </div>
+
+        <div class="food-gallery-grid">
+          {% for dish in restaurant.dishes %}
+          <div class="food-item-card" data-dish-id="{{ dish.id }}">
+            <div class="food-img-wrap">
+              <img src="{{ dish.image }}" alt="{{ dish.name }}" loading="lazy">
+              {% if dish.outlet == 'Krishna Swaad' %}
+              <span class="food-badge veg">Pure Veg</span>
+              {% else %}
+              <span class="food-badge seafood">Coastal Specialty</span>
+              {% endif %}
+            </div>
+            <div class="food-info">
+              <div class="food-category">{{ dish.category }} · {{ dish.outlet }}</div>
+              <h4 class="food-title">{{ dish.name }}</h4>
+              <p class="food-desc">{{ dish.description }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       STAY WITH US. DINE WITH US. (CONNECTION SECTION)
+       ========================================================================== -->
+  <section class="connection-section">
+    <div class="container">
+      <div class="connection-box">
+        <h2 class="connection-title">STAY WITH US. DINE WITH US.</h2>
+        <p class="connection-desc">
+          Enjoy a comfortable stay and convenient dining at Hotel Coastal Palace. Everything you need for an unforgettable coastal getaway in Karnataka.
+        </p>
+        <div class="connection-actions">
+          <button type="button" class="btn btn-primary btn-trigger-booking" id="connectionBookBtn">BOOK YOUR STAY</button>
+          <a href="#restaurant" class="btn btn-outline-white">EXPLORE RESTAURANT</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       ABOUT SECTION
+       ========================================================================== -->
+  <section class="about-section" id="about">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-img-box">
+          <img src="/static/images/hotel/reception_lobby.jpg" alt="Hotel Coastal Palace Reception Lobby" loading="lazy">
+        </div>
+        <div class="about-text">
+          <span class="section-tag">ABOUT US</span>
+          <h3>Warm Coastal Hospitality</h3>
+          <p>
+            Located at Pandubettu, Kalmadi, Mudanidambur, Karnataka, Hotel Coastal Palace is designed to offer discerning travelers, families, and business guests effortless comfort and authentic hospitality.
+          </p>
+          <p>
+            With close proximity to Malpe Beach, the revered Kalmadi Church, and key transit hubs, our property provides contemporary double and deluxe accommodations paired with two celebrated dining destinations right downstairs.
+          </p>
+
+          <div class="address-highlight">
+            <strong>HOTEL COASTAL PALACE</strong>
+            <span>{{ settings.address }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hotel Infrastructure & Premises Gallery -->
+      <div style="margin-top: 4.5rem;">
+        <div class="text-center" style="margin-bottom: 2.5rem;">
+          <span class="section-tag">OUR PREMISES</span>
+          <h3 class="section-title" style="font-size: 2rem;">LODGE INFRASTRUCTURE & AMBIENCE</h3>
+          <p class="section-subtitle">
+            Explore our welcoming guest reception, luxury lounge with living marine aquarium, and sacred sanctum.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+          {% for item in infrastructure %}
+          <div class="food-item-card" style="cursor: pointer;">
+            <div class="food-img-wrap" style="height: 230px;">
+              <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy">
+              <span class="food-badge" style="background: #C59B27; color: #FFFFFF;">{{ item.category }}</span>
+            </div>
+            <div class="food-info">
+              <h4 class="food-title">{{ item.title }}</h4>
+              <p class="food-desc">{{ item.caption }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       AMENITIES SECTION
+       ========================================================================== -->
+  <section class="amenities-section" id="amenities">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-tag">GUEST SERVICES</span>
+        <h2 class="section-title">HOTEL AMENITIES</h2>
+        <p class="section-subtitle">
+          Every amenity is carefully configured to ensure maximum convenience and ease throughout your stay.
+        </p>
+      </div>
+
+      <div class="amenities-grid">
+        <div class="amenity-card">
+          <div class="amenity-icon">📶</div>
+          <h4 class="amenity-title">Free Wi-Fi</h4>
+          <p class="amenity-subtitle">High-speed connectivity across rooms and dining areas</p>
+        </div>
+        <div class="amenity-card">
+          <div class="amenity-icon">🛏️</div>
+          <h4 class="amenity-title">Plush Double Beds</h4>
+          <p class="amenity-subtitle">Premium orthopaedic mattresses and crisp linens</p>
+        </div>
+        <div class="amenity-card">
+          <div class="amenity-icon">🌅</div>
+          <h4 class="amenity-title">Private Balconies</h4>
+          <p class="amenity-subtitle">Selected Deluxe and Superior rooms with breezy views</p>
+        </div>
+        <div class="amenity-card">
+          <div class="amenity-icon">❄️</div>
+          <h4 class="amenity-title">Air Conditioning</h4>
+          <p class="amenity-subtitle">Individually controlled climate cooling in every room</p>
+        </div>
+        <div class="amenity-card">
+          <div class="amenity-icon">🍽️</div>
+          <h4 class="amenity-title">On-Site Dining</h4>
+          <p class="amenity-subtitle">Krishna Swaad Pure Veg & Coastal Flavours Seafood</p>
+        </div>
+        <div class="amenity-card">
+          <div class="amenity-icon">🚿</div>
+          <h4 class="amenity-title">24/7 Hot Water</h4>
+          <p class="amenity-subtitle">Clean, high-pressure hot and cold water supply</p>
+        </div>
+        <div class="amenity-card">
+          <div class="amenity-icon">📺</div>
+          <h4 class="amenity-title">Smart / LED TVs</h4>
+          <p class="amenity-subtitle">In-room entertainment with major satellite channels</p>
+        </div>
+        <div class="amenity-card">
+          <div class="amenity-icon">🚗</div>
+          <h4 class="amenity-title">Free Guest Parking</h4>
+          <p class="amenity-subtitle">Secure on-site parking for cars and tourist vehicles</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       LOCATION SECTION
+       ========================================================================== -->
+  <section class="location-section" id="location">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-tag">FIND US</span>
+        <h2 class="section-title">OUR LOCATION</h2>
+        <p class="section-subtitle">
+          Conveniently located in Pandubettu, Kalmadi, offering smooth access to Malpe harbor, local attractions, and main highways.
+        </p>
+      </div>
+
+      <div class="location-grid">
+        <div class="location-info-card">
+          <div>
+            <h3 style="font-family: var(--font-serif); font-size: 1.8rem; color: var(--primary-navy); margin-bottom: 0.5rem;">
+              {{ settings.hotel_name }}
+            </h3>
+            <p style="color: #64748B; margin-bottom: 1.5rem;">{{ settings.address }}</p>
+
+            <ul class="contact-info-list">
+              <li class="contact-item">
+                <div class="contact-item-icon">📍</div>
+                <div class="contact-item-content">
+                  <strong>Address</strong>
+                  <span>Pandubettu, Kalmadi, Mudanidambur, Karnataka 576106</span>
+                </div>
+              </li>
+              <li class="contact-item">
+                <div class="contact-item-icon">🕒</div>
+                <div class="contact-item-content">
+                  <strong>Timings</strong>
+                  <span>Check-in: {{ settings.checkin_time }} · Check-out: {{ settings.checkout_time }}</span>
+                </div>
+              </li>
+              <li class="contact-item">
+                <div class="contact-item-icon">📞</div>
+                <div class="contact-item-content">
+                  <strong>Reservations & Enquiries</strong>
+                  <a href="tel:{{ settings.official_phone|replace(' ', '') }}">{{ settings.official_phone }}</a>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <a href="{{ settings.map_directions_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-navy" id="btnGetDirections">
+            GET DIRECTIONS
+          </a>
+        </div>
+
+        <div class="location-map-wrap">
+          <iframe 
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3882.88!2d74.72!3d13.344!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDIwJzM4LjQiTiA3NMKwNDMnMTIuMCJF!5e0!3m2!1sen!2sin!4v1690000000000" 
+            title="Hotel Coastal Palace Location Map"
+            allowfullscreen="" 
+            loading="lazy" 
+            referrerpolicy="no-referrer-when-downgrade">
+          </iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       CONTACT SECTION
+       ========================================================================== -->
+  <section class="contact-section" id="contact" style="padding: 5rem 0; background: #FFFFFF;">
+    <div class="container text-center">
+      <span class="section-tag">DIRECT ASSISTANCE</span>
+      <h2 class="section-title">CONTACT US</h2>
+      <p class="section-subtitle">
+        Have a question regarding room bookings, event reservations, or restaurant banquets? Our front desk is available to assist you.
+      </p>
+
+      <div style="display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem;">
+        <a href="tel:{{ settings.official_phone|replace(' ', '') }}" class="btn btn-call" id="contactCallBtn">
+          📞 CALL HOTEL ({{ settings.official_phone }})
+        </a>
+        <a href="mailto:{{ settings.official_email }}" class="btn btn-outline-gold">
+          ✉️ EMAIL RESERVATIONS
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       FEEDBACK SYSTEM ("SHARE YOUR EXPERIENCE")
+       ========================================================================== -->
+  <section class="feedback-section" id="feedback">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-tag">GUEST EXPERIENCES</span>
+        <h2 class="section-title">GUEST REVIEWS & FEEDBACK</h2>
+        <p class="section-subtitle">
+          Real feedback from travelers and diners who experienced Hotel Coastal Palace.
+        </p>
+      </div>
+
+      <div class="feedback-grid" id="publicFeedbackContainer">
+        {% for fb in feedback %}
+        <div class="feedback-card">
+          <div class="feedback-stars">
+            {% for _ in range(fb.rating) %}★{% endfor %}
+            {% for _ in range(5 - fb.rating) %}☆{% endfor %}
+          </div>
+          <p class="feedback-text">"{{ fb.message }}"</p>
+          <div class="feedback-author">
+            <div class="feedback-avatar">{{ fb.customer_name[0] }}</div>
+            <div class="feedback-author-info">
+              <strong>{{ fb.customer_name }}</strong>
+              <span>Verified Guest Review</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Share Experience CTA -->
+      <div class="feedback-cta-banner">
+        <h3 style="font-family: var(--font-serif); font-size: 1.6rem; color: var(--primary-navy); margin-bottom: 0.5rem;">
+          SHARE YOUR EXPERIENCE
+        </h3>
+        <p style="color: #64748B; margin-bottom: 1.5rem; font-size: 0.95rem;">
+          We treasure your thoughts! Tell us how your stay or dining experience was at Hotel Coastal Palace.
+        </p>
+        <button type="button" class="btn btn-primary" onclick="openModal('feedbackModal')" id="btnGiveFeedback">
+          GIVE FEEDBACK
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       FOOTER
+       ========================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h4>{{ settings.hotel_name }}</h4>
+          <p>{{ settings.tagline }}</p>
+          <div style="font-size: 0.85rem; color: #94A3B8; line-height: 1.5;">
+            Pandubettu, Kalmadi, Mudanidambur,<br>
+            Karnataka 576106
+          </div>
+        </div>
+
+        <div>
+          <h5 class="footer-heading">Quick Links</h5>
+          <ul class="footer-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#rooms">Rooms</a></li>
+            <li><a href="#restaurant">Restaurant</a></li>
+            <li><a href="#food-gallery">Gallery</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 class="footer-heading">Information</h5>
+          <ul class="footer-links">
+            <li><a href="#about">About</a></li>
+            <li><a href="#amenities">Amenities</a></li>
+            <li><a href="#location">Location</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 class="footer-heading">Reservations</h5>
+          <div class="footer-contact-info">
+            <p><strong>Phone:</strong> {{ settings.official_phone }}</p>
+            <p><strong>Email:</strong> {{ settings.official_email }}</p>
+            <p><strong>Timings:</strong> 24/7 Front Desk</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="copyright">
+          © 2026 Hotel Coastal Palace. All rights reserved.
+        </div>
+        <div class="footer-actions">
+          <button type="button" class="btn-icon btn-trigger-booking" id="footerBookBtn" style="background: rgba(255,255,255,0.1); color: white; border: none; cursor: pointer;">BOOK YOUR STAY</button>
+          <a href="tel:{{ settings.official_phone|replace(' ', '') }}" class="btn-icon" style="background: #10B981; color: white; border: none;">CALL HOTEL</a>
+          <button type="button" class="btn-icon" onclick="openModal('feedbackModal')" style="background: rgba(255,255,255,0.1); color: white; border: none;">GIVE FEEDBACK</button>
+          <a href="/admin/login" style="font-size: 0.75rem; color: #64748B; margin-left: 0.75rem; text-decoration: underline;">Staff Portal</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==========================================================================
+       MODAL: ROOM DETAILS & GALLERY LIGHTBOX
+       ========================================================================== -->
+  <div class="modal-backdrop" id="roomDetailsModal">
+    <div class="modal-box large">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modalRoomName">Room Name</h3>
+          <span style="font-size: 0.8rem; color: #64748B;" id="modalRoomNumber">Room 101</span>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="closeModal('roomDetailsModal')" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; align-items: start;">
+          <!-- Gallery -->
+          <div>
+            <div style="height: 280px; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 0.75rem;">
+              <img id="modalMainImage" src="" alt="Room Main Photo" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div id="modalThumbsContainer" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem;"></div>
+          </div>
+
+          <!-- Specs & Booking -->
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+              <span id="modalRoomStatus" class="room-badge available">AVAILABLE</span>
+              <div style="text-align: right;">
+                <span id="modalRoomPrice" style="font-size: 1.6rem; font-weight: 800; color: var(--primary-navy);">₹3,213</span>
+                <span style="font-size: 0.75rem; color: #64748B; display: block;">per night</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.25rem; font-size: 0.88rem;">
+              <div><strong>Bed Type:</strong> <span id="modalBedType">1 Double Bed</span></div>
+              <div><strong>Capacity:</strong> <span id="modalMaxGuests">Up to 2 Guests</span></div>
+              <div><strong>Cancellation:</strong> <span id="modalCancellation" style="color: #10B981; font-weight: 600;">Free cancellation</span></div>
+            </div>
+
+            <p id="modalRoomDesc" style="font-size: 0.9rem; color: #475569; line-height: 1.6; margin-bottom: 1.25rem;">
+              Room description...
+            </p>
+
+            <h5 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-navy); margin-bottom: 0.5rem;">
+              Included Amenities
+            </h5>
+            <div id="modalRoomAmenities" style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.5rem;"></div>
+
+            <button type="button" class="btn btn-primary" id="modalBookBtn" style="width: 100%;">
+              BOOK THIS ROOM
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL: CUSTOMER BOOKING FORM
+       ========================================================================== -->
+  <div class="modal-backdrop" id="bookingModal">
+    <div class="modal-box">
+      <!-- Screen 1: Form -->
+      <div id="bookingFormScreen">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">Book Your Stay</h3>
+            <span style="font-size: 0.8rem; color: #64748B;" id="bookModalRoomName">Selected Room</span>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="closeModal('bookingModal')" aria-label="Close">✕</button>
+        </div>
+
+        <form id="customerBookingForm" class="modal-body" style="padding-top: 1.25rem;">
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label for="bookingRoomSelect">SELECTED ROOM TYPE *</label>
+            <select id="bookingRoomSelect" class="form-control" required style="font-weight: 600;">
+              {% for room in rooms %}
+              <option value="{{ room.room_id }}" data-price="{{ room.price_per_night }}" data-name="{{ room.room_name }}" data-max="{{ room.maximum_guests }}">
+                {{ room.room_name }} — ₹{{ "{:,.0f}".format(room.price_per_night) }} / night (Max {{ room.maximum_guests }} Guests)
+              </option>
+              {% endfor %}
+            </select>
+            <input type="hidden" id="bookingRoomId" value="{{ rooms[0].room_id if rooms else '1' }}">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group">
+              <label for="bookingCheckIn">CHECK-IN *</label>
+              <input type="date" id="bookingCheckIn" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="bookingCheckOut">CHECK-OUT *</label>
+              <input type="date" id="bookingCheckOut" class="form-control" required>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group">
+              <label for="bookingAdults">ADULTS *</label>
+              <select id="bookingAdults" class="form-control" required>
+                <option value="1">1 Adult</option>
+                <option value="2" selected>2 Adults</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="bookingChildren">CHILDREN</label>
+              <select id="bookingChildren" class="form-control">
+                <option value="0" selected>0 Children</option>
+                <option value="1">1 Child</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="bookingCustomerName">FULL NAME *</label>
+            <input type="text" id="bookingCustomerName" class="form-control" placeholder="Enter guest full name" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group">
+              <label for="bookingMobile">MOBILE NUMBER *</label>
+              <input type="tel" id="bookingMobile" class="form-control" placeholder="e.g. +91 98450 12345" required>
+            </div>
+            <div class="form-group">
+              <label for="bookingEmail">EMAIL ADDRESS *</label>
+              <input type="email" id="bookingEmail" class="form-control" placeholder="e.g. guest@example.com" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="bookingNotes">SPECIAL REQUESTS (OPTIONAL)</label>
+            <textarea id="bookingNotes" class="form-control" rows="2" placeholder="Early check-in, extra pillows, ground floor, etc."></textarea>
+          </div>
+
+          <!-- Real-Time Booking Summary -->
+          <div class="booking-summary-box">
+            <h5 style="font-size: 0.85rem; text-transform: uppercase; color: var(--primary-navy); margin-bottom: 0.75rem;">
+              Booking Summary
+            </h5>
+            <div class="summary-row">
+              <span style="color: #64748B;">Price per night:</span>
+              <span id="summaryPricePerNight">₹3,213</span>
+            </div>
+            <div class="summary-row">
+              <span style="color: #64748B;">Duration:</span>
+              <span id="summaryNights">1 night</span>
+            </div>
+            <div class="summary-row">
+              <span style="color: #64748B;">Cancellation:</span>
+              <span style="color: #10B981; font-weight: 600;">Free cancellation</span>
+            </div>
+            <div class="summary-row total">
+              <span>Estimated Total:</span>
+              <span id="summaryTotal">₹3,213</span>
+            </div>
+          </div>
+
+          <div class="availability-alert error" id="bookingErrorAlert" style="margin-bottom: 1.25rem;"></div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%;" id="btnSubmitBooking">
+            SUBMIT BOOKING REQUEST
+          </button>
+        </form>
+      </div>
+
+      <!-- Screen 2: Success Confirmation & Call Hotel -->
+      <div id="bookingSuccessScreen" style="display: none; padding: 2.5rem 2rem; text-align: center;">
+        <div style="width: 60px; height: 60px; background: #D1FAE5; color: #065F46; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.25rem;">
+          ✓
+        </div>
+        <h3 style="font-family: var(--font-serif); font-size: 1.8rem; color: var(--primary-navy); margin-bottom: 0.5rem;">
+          Booking Request Submitted!
+        </h3>
+        <p style="color: #475569; font-size: 0.95rem; margin-bottom: 1.5rem;">
+          Please call <strong>HOTEL COASTAL PALACE</strong> to confirm your booking and payment.
+        </p>
+
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 1.25rem; text-align: left; margin-bottom: 1.75rem; font-size: 0.9rem;">
+          <div style="margin-bottom: 0.5rem;"><strong>Booking ID:</strong> <span id="successBookingId" style="color: #C59B27; font-weight: 800;">CPB-12345</span></div>
+          <div style="margin-bottom: 0.5rem;"><strong>Guest Name:</strong> <span id="successCustomerName"></span></div>
+          <div style="margin-bottom: 0.5rem;"><strong>Room:</strong> <span id="successRoomName"></span></div>
+          <div style="margin-bottom: 0.5rem;"><strong>Stay Dates:</strong> <span id="successDates"></span></div>
+          <div style="margin-bottom: 0.5rem;"><strong>Total Amount:</strong> <span id="successTotal" style="font-weight: 700; color: var(--primary-navy);"></span></div>
+          <div><strong>Status:</strong> <span class="status-pill pending">PENDING CONFIRMATION</span></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <a href="tel:{{ settings.official_phone|replace(' ', '') }}" class="btn btn-call" id="successCallHotelBtn" style="font-size: 1rem; padding: 0.9rem;">
+            📞 CALL HOTEL ({{ settings.official_phone }})
+          </a>
+          <button type="button" class="btn btn-navy" onclick="closeModal('bookingModal')">
+            Close & Return to Home
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL: CUSTOMER FEEDBACK FORM
+       ========================================================================== -->
+  <div class="modal-backdrop" id="feedbackModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Share Your Experience</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('feedbackModal')" aria-label="Close">✕</button>
+      </div>
+
+      <form id="customerFeedbackForm" class="modal-body">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label>YOUR RATING *</label>
+          <div class="star-rating-input" style="display: flex; gap: 0.5rem; font-size: 1.75rem; cursor: pointer; align-items: center;">
+            <label><input type="radio" name="rating" value="1" style="display:none;"><span class="star-label" style="color: #F59E0B;">★</span></label>
+            <label><input type="radio" name="rating" value="2" style="display:none;"><span class="star-label" style="color: #F59E0B;">★</span></label>
+            <label><input type="radio" name="rating" value="3" style="display:none;"><span class="star-label" style="color: #F59E0B;">★</span></label>
+            <label><input type="radio" name="rating" value="4" style="display:none;"><span class="star-label" style="color: #F59E0B;">★</span></label>
+            <label><input type="radio" name="rating" value="5" checked style="display:none;"><span class="star-label" style="color: #F59E0B;">★</span></label>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="feedbackName">YOUR NAME *</label>
+          <input type="text" id="feedbackName" class="form-control" placeholder="Enter your name" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label for="feedbackContact">MOBILE OR EMAIL (OPTIONAL)</label>
+            <input type="text" id="feedbackContact" class="form-control" placeholder="Phone or email">
+          </div>
+          <div class="form-group">
+            <label for="feedbackBookingId">BOOKING ID (OPTIONAL)</label>
+            <input type="text" id="feedbackBookingId" class="form-control" placeholder="e.g. CPB-1082">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label for="feedbackMessage">YOUR REVIEW & COMMENTS *</label>
+          <textarea id="feedbackMessage" class="form-control" rows="4" placeholder="How was your stay, room comfort, food quality, or service?" required></textarea>
+        </div>
+
+        <div class="availability-alert" id="feedbackAlert" style="margin-bottom: 1.25rem;"></div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          SUBMIT FEEDBACK
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       FOOD & RESTAURANT LIGHTBOX
+       ========================================================================== -->
+  <div class="lightbox-modal" id="galleryLightbox">
+    <button type="button" class="lightbox-btn lightbox-close" id="lightboxClose" aria-label="Close Lightbox">✕</button>
+    <button type="button" class="lightbox-btn lightbox-prev" id="lightboxPrev" aria-label="Previous Photo">❮</button>
+    
+    <div class="lightbox-img-container">
+      <img id="lightboxImage" src="" alt="Expanded View">
+    </div>
+    
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+    <button type="button" class="lightbox-btn lightbox-next" id="lightboxNext" aria-label="Next Photo">❯</button>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
