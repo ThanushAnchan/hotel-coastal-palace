@@ -3,16 +3,162 @@ import json
 import os
 import secrets
 import hashlib
+import logging
 from datetime import datetime, date
+from decimal import Decimal
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "hotel.db")
+logger = logging.getLogger("hotel_coastal_palace.database")
+
+# Optional PostgreSQL driver
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+except ImportError:
+    psycopg2 = None
+    RealDictCursor = None
+
+# External Database URL (e.g. Supabase, Neon, Render Postgres, Vercel Postgres)
+DATABASE_URL = (
+    os.environ.get("DATABASE_URL")
+    or os.environ.get("POSTGRES_URL")
+    or os.environ.get("POSTGRES_PRISMA_URL")
+    or os.environ.get("POSTGRES_URL_NON_POOLING")
+)
+
+# Vercel and Serverless environment detection
+IS_VERCEL = bool(
+    os.environ.get("VERCEL")
+    or os.environ.get("VERCEL_ENV")
+    or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+)
+
+if DATABASE_URL:
+    DB_ENGINE = "postgres"
+else:
+    DB_ENGINE = "sqlite"
+    if IS_VERCEL:
+        # On Vercel without external DB, store SQLite in /tmp (writable in serverless)
+        # Note: SQLite on serverless is non-persistent across instances.
+        DB_PATH = os.environ.get("SQLITE_PATH", "/tmp/hotel.db")
+        logger.warning(
+            "Running on Vercel without DATABASE_URL/POSTGRES_URL. SQLite in /tmp will not persist across serverless instances. "
+            "For persistent production storage, connect an external PostgreSQL database."
+        )
+    else:
+        # Standard local development database path
+        DB_PATH = os.environ.get("SQLITE_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "hotel.db"))
+
+
+class PostgresCursorWrapper:
+    """Translates DB-API queries for PostgreSQL (e.g. ? placeholders to %s and RETURNING for lastrowid)."""
+    def __init__(self, raw_cursor):
+        self.cur = raw_cursor
+        self.lastrowid = None
+
+    def execute(self, query, params=None):
+        pg_query = query.replace("?", "%s")
+        if pg_query.strip().upper().startswith("BEGIN IMMEDIATE"):
+            # Transactions are started automatically in psycopg2
+            return self
+
+        auto_return_col = None
+        upper_query = pg_query.strip().upper()
+        if upper_query.startswith("INSERT INTO") and "RETURNING" not in upper_query:
+            if "INSERT INTO ROOMS" in upper_query:
+                pg_query += " RETURNING room_id"
+                auto_return_col = "room_id"
+            elif "INSERT INTO FEEDBACK" in upper_query:
+                pg_query += " RETURNING feedback_id"
+                auto_return_col = "feedback_id"
+
+        if params is not None:
+            self.cur.execute(pg_query, tuple(params))
+        else:
+            self.cur.execute(pg_query)
+
+        if auto_return_col:
+            try:
+                ret = self.cur.fetchone()
+                if ret:
+                    self.lastrowid = ret.get(auto_return_col)
+            except Exception:
+                pass
+        return self
+
+    def executemany(self, query, params_list):
+        pg_query = query.replace("?", "%s")
+        self.cur.executemany(pg_query, params_list)
+        return self
+
+    def _convert_row(self, row):
+        if row is None:
+            return None
+        d = dict(row)
+        for k, v in d.items():
+            if isinstance(v, Decimal):
+                d[k] = float(v)
+        return d
+
+    def fetchone(self):
+        row = self.cur.fetchone()
+        return self._convert_row(row)
+
+    def fetchall(self):
+        rows = self.cur.fetchall()
+        return [self._convert_row(r) for r in rows]
+
+    @property
+    def rowcount(self):
+        return self.cur.rowcount
+
+    def close(self):
+        self.cur.close()
+
+
+class PostgresConnectionWrapper:
+    """Wraps psycopg2 connection to mimic sqlite3 connection behavior."""
+    def __init__(self, raw_conn):
+        self.conn = raw_conn
+
+    def cursor(self):
+        return PostgresCursorWrapper(self.conn.cursor())
+
+    def execute(self, query, params=None):
+        cur = self.cursor()
+        cur.execute(query, params)
+        return cur
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.conn.close()
+
 
 def get_db_connection():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=20.0)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    if DB_ENGINE == "postgres":
+        if not psycopg2:
+            raise RuntimeError("psycopg2 is required for PostgreSQL. Please install psycopg2-binary.")
+        dsn = DATABASE_URL
+        if dsn.startswith("postgres://"):
+            dsn = "postgresql://" + dsn[len("postgres://"):]
+        raw_conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
+        return PostgresConnectionWrapper(raw_conn)
+    else:
+        # SQLite
+        db_dir = os.path.dirname(DB_PATH)
+        if db_dir:
+            try:
+                os.makedirs(db_dir, exist_ok=True)
+            except OSError:
+                pass
+        conn = sqlite3.connect(DB_PATH, timeout=20.0)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
 
 def hash_password(password: str) -> str:
     salt = "coastal_palace_salt_2026"
@@ -22,76 +168,139 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Rooms table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS rooms (
-        room_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_number TEXT NOT NULL UNIQUE,
-        room_name TEXT NOT NULL,
-        room_type TEXT NOT NULL,
-        description TEXT NOT NULL,
-        price_per_night REAL NOT NULL,
-        bed_type TEXT NOT NULL,
-        maximum_guests INTEGER NOT NULL DEFAULT 2,
-        amenities TEXT NOT NULL,
-        photos TEXT NOT NULL,
-        status TEXT NOT NULL CHECK(status IN ('AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'BLOCKED')),
-        feature TEXT DEFAULT '',
-        cancellation TEXT DEFAULT 'Free cancellation',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    )
-    """)
+    if DB_ENGINE == "postgres":
+        # PostgreSQL schema
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rooms (
+            room_id SERIAL PRIMARY KEY,
+            room_number VARCHAR(50) NOT NULL UNIQUE,
+            room_name VARCHAR(255) NOT NULL,
+            room_type VARCHAR(50) NOT NULL,
+            description TEXT NOT NULL,
+            price_per_night NUMERIC(10, 2) NOT NULL,
+            bed_type VARCHAR(100) NOT NULL,
+            maximum_guests INTEGER NOT NULL DEFAULT 2,
+            amenities TEXT NOT NULL,
+            photos TEXT NOT NULL,
+            status VARCHAR(20) NOT NULL CHECK(status IN ('AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'BLOCKED')),
+            feature VARCHAR(100) DEFAULT '',
+            cancellation VARCHAR(100) DEFAULT 'Free cancellation',
+            created_at VARCHAR(50) NOT NULL,
+            updated_at VARCHAR(50) NOT NULL
+        )
+        """)
 
-    # Bookings table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS bookings (
-        booking_id TEXT PRIMARY KEY,
-        customer_name TEXT NOT NULL,
-        mobile TEXT NOT NULL,
-        email TEXT NOT NULL,
-        room_id INTEGER NOT NULL,
-        check_in TEXT NOT NULL,
-        check_out TEXT NOT NULL,
-        adults INTEGER NOT NULL DEFAULT 1,
-        children INTEGER NOT NULL DEFAULT 0,
-        price_per_night REAL NOT NULL,
-        number_of_nights INTEGER NOT NULL,
-        total_amount REAL NOT NULL,
-        booking_status TEXT NOT NULL CHECK(booking_status IN ('PENDING CONFIRMATION', 'CONFIRMED', 'CANCELLED', 'COMPLETED')),
-        special_requests TEXT DEFAULT '',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (room_id) REFERENCES rooms (room_id) ON DELETE RESTRICT
-    )
-    """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            booking_id VARCHAR(50) PRIMARY KEY,
+            customer_name VARCHAR(255) NOT NULL,
+            mobile VARCHAR(50) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            room_id INTEGER NOT NULL REFERENCES rooms (room_id) ON DELETE RESTRICT,
+            check_in VARCHAR(20) NOT NULL,
+            check_out VARCHAR(20) NOT NULL,
+            adults INTEGER NOT NULL DEFAULT 1,
+            children INTEGER NOT NULL DEFAULT 0,
+            price_per_night NUMERIC(10, 2) NOT NULL,
+            number_of_nights INTEGER NOT NULL,
+            total_amount NUMERIC(10, 2) NOT NULL,
+            booking_status VARCHAR(30) NOT NULL CHECK(booking_status IN ('PENDING CONFIRMATION', 'CONFIRMED', 'CANCELLED', 'COMPLETED')),
+            special_requests TEXT DEFAULT '',
+            created_at VARCHAR(50) NOT NULL,
+            updated_at VARCHAR(50) NOT NULL
+        )
+        """)
 
-    # Index for fast booking date overlap queries
-    cursor.execute("""
-    CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings (room_id, check_in, check_out, booking_status)
-    """)
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings (room_id, check_in, check_out, booking_status)
+        """)
 
-    # Feedback table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS feedback (
-        feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_name TEXT NOT NULL,
-        contact TEXT DEFAULT '',
-        booking_id TEXT DEFAULT '',
-        rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
-        message TEXT NOT NULL,
-        status TEXT NOT NULL CHECK(status IN ('PENDING', 'APPROVED', 'HIDDEN')),
-        created_at TEXT NOT NULL
-    )
-    """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS feedback (
+            feedback_id SERIAL PRIMARY KEY,
+            customer_name VARCHAR(255) NOT NULL,
+            contact VARCHAR(100) DEFAULT '',
+            booking_id VARCHAR(50) DEFAULT '',
+            rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+            message TEXT NOT NULL,
+            status VARCHAR(20) NOT NULL CHECK(status IN ('PENDING', 'APPROVED', 'HIDDEN')),
+            created_at VARCHAR(50) NOT NULL
+        )
+        """)
 
-    # Settings table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-    )
-    """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key VARCHAR(100) PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """)
+    else:
+        # SQLite schema
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rooms (
+            room_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_number TEXT NOT NULL UNIQUE,
+            room_name TEXT NOT NULL,
+            room_type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            price_per_night REAL NOT NULL,
+            bed_type TEXT NOT NULL,
+            maximum_guests INTEGER NOT NULL DEFAULT 2,
+            amenities TEXT NOT NULL,
+            photos TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'BLOCKED')),
+            feature TEXT DEFAULT '',
+            cancellation TEXT DEFAULT 'Free cancellation',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            booking_id TEXT PRIMARY KEY,
+            customer_name TEXT NOT NULL,
+            mobile TEXT NOT NULL,
+            email TEXT NOT NULL,
+            room_id INTEGER NOT NULL,
+            check_in TEXT NOT NULL,
+            check_out TEXT NOT NULL,
+            adults INTEGER NOT NULL DEFAULT 1,
+            children INTEGER NOT NULL DEFAULT 0,
+            price_per_night REAL NOT NULL,
+            number_of_nights INTEGER NOT NULL,
+            total_amount REAL NOT NULL,
+            booking_status TEXT NOT NULL CHECK(booking_status IN ('PENDING CONFIRMATION', 'CONFIRMED', 'CANCELLED', 'COMPLETED')),
+            special_requests TEXT DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (room_id) REFERENCES rooms (room_id) ON DELETE RESTRICT
+        )
+        """)
+
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings (room_id, check_in, check_out, booking_status)
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS feedback (
+            feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_name TEXT NOT NULL,
+            contact TEXT DEFAULT '',
+            booking_id TEXT DEFAULT '',
+            rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+            message TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('PENDING', 'APPROVED', 'HIDDEN')),
+            created_at TEXT NOT NULL
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """)
 
     # Seed default settings
     default_settings = {
@@ -111,11 +320,12 @@ def init_db():
     }
 
     for k, v in default_settings.items():
-        cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
+        cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING", (k, v))
 
     # Seed exact 3 initial rooms if table is empty
     cursor.execute("SELECT COUNT(*) as count FROM rooms")
-    room_count = cursor.fetchone()["count"]
+    row = cursor.fetchone()
+    room_count = row["count"] if row else 0
 
     if room_count == 0:
         now = datetime.now().isoformat()
@@ -180,7 +390,9 @@ def init_db():
 
     # Seed feedback if table is empty
     cursor.execute("SELECT COUNT(*) as count FROM feedback")
-    if cursor.fetchone()["count"] == 0:
+    fb_row = cursor.fetchone()
+    fb_count = fb_row["count"] if fb_row else 0
+    if fb_count == 0:
         initial_feedback = [
             ("Suresh Shetty", "+91 98451 12340", "CPB-1018", 5, "Outstanding hospitality! The rooms were spotless, AC was great, and having Coastal Flavours seafood right downstairs was a dream come true.", "APPROVED", "2026-09-18T14:30:00"),
             ("Pooja Hegde", "pooja.hegde@example.com", "CPB-1044", 5, "We booked the Deluxe Room with balcony. Very clean, prompt service, and Krishna Swaad breakfast (idli vada & filter coffee) was superb.", "APPROVED", "2026-09-22T09:15:00"),
@@ -193,6 +405,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+
 
 # --- Room Functions ---
 
@@ -507,7 +720,7 @@ def add_room(room_number, room_name, room_type, description, price_per_night, be
         conn.commit()
         conn.close()
         return room_id, ""
-    except sqlite3.IntegrityError:
+    except (sqlite3.IntegrityError, getattr(psycopg2, "IntegrityError", sqlite3.IntegrityError)):
         conn.close()
         return None, f"Room number '{room_number}' already exists."
     except Exception as e:
@@ -537,7 +750,7 @@ def update_room(room_id, room_number, room_name, room_type, description, price_p
         if affected == 0:
             return False, "Room not found."
         return True, ""
-    except sqlite3.IntegrityError:
+    except (sqlite3.IntegrityError, getattr(psycopg2, "IntegrityError", sqlite3.IntegrityError)):
         conn.close()
         return False, f"Room number '{room_number}' already exists on another room."
     except Exception as e:
@@ -678,7 +891,7 @@ def get_dashboard_metrics():
 
     # Booking stats
     cursor.execute("SELECT booking_status, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total_revenue FROM bookings GROUP BY booking_status")
-    booking_counts = {r["booking_status"]: {"count": r["count"], "revenue": r["total_revenue"]} for r in cursor.fetchall()}
+    booking_counts = {r["booking_status"]: {"count": int(r["count"]), "revenue": float(r["total_revenue"])} for r in cursor.fetchall()}
 
     # Feedback stats
     cursor.execute("SELECT status, COUNT(*) as count FROM feedback GROUP BY status")

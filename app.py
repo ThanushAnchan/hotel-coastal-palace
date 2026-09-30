@@ -1,19 +1,55 @@
 import os
 import secrets
 import json
+import logging
+import tempfile
 from datetime import datetime, date
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 import database
 
+logger = logging.getLogger("hotel_coastal_palace")
+
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = os.environ.get("SECRET_KEY", "coastal-palace-secret-key-99238472918471")
-app.config["UPLOAD_FOLDER"] = os.path.join(app.static_folder, "images", "uploads")
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-# Initialize database
-database.init_db()
+# Vercel / Serverless environment detection
+IS_VERCEL = bool(
+    os.environ.get("VERCEL")
+    or os.environ.get("VERCEL_ENV")
+    or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+)
+
+# Upload directory configuration:
+# 1. Do NOT create or write upload directories inside static/, templates/, or the deployed project directory.
+# 2. If temporary uploads are required, use /tmp/uploads on Vercel.
+# 3. Do NOT call os.makedirs() at import time to prevent Read-only file system errors on Vercel.
+if IS_VERCEL:
+    app.config["UPLOAD_FOLDER"] = os.environ.get("UPLOAD_FOLDER", "/tmp/uploads")
+else:
+    app.config["UPLOAD_FOLDER"] = os.environ.get(
+        "UPLOAD_FOLDER", os.path.join(tempfile.gettempdir(), "hotel_uploads")
+    )
+
+# Non-blocking database initialization at import time (logs warning on cold start if database is not reachable yet)
+try:
+    database.init_db()
+except Exception as e:
+    logger.warning("Database startup initialization deferred (will initialize on request): %s", e)
+
+_db_initialized = False
+
+@app.before_request
+def ensure_db():
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            database.init_db()
+            _db_initialized = True
+        except Exception as e:
+            logger.warning("Database ensure_db check: %s", e)
+
 
 # --- Decorator for Admin Authentication ---
 def admin_required(f):
@@ -559,6 +595,17 @@ def api_admin_settings():
     database.update_settings(data)
     return jsonify({"success": True, "message": "Settings updated successfully."})
 
+@app.route("/uploads/<path:filename>")
+@app.route("/static/images/uploads/<path:filename>")
+def serve_upload(filename):
+    upload_folder = app.config.get("UPLOAD_FOLDER")
+    if upload_folder and os.path.exists(os.path.join(upload_folder, filename)):
+        return send_from_directory(upload_folder, filename)
+    static_uploads = os.path.join(app.static_folder, "images", "uploads")
+    if os.path.exists(os.path.join(static_uploads, filename)):
+        return send_from_directory(static_uploads, filename)
+    return jsonify({"error": "File not found."}), 404
+
 @app.route("/api/admin/upload-photo", methods=["POST"])
 @admin_required
 def api_admin_upload_photo():
@@ -570,10 +617,17 @@ def api_admin_upload_photo():
 
     filename = secure_filename(file.filename)
     unique_name = f"{int(datetime.now().timestamp())}_{filename}"
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+    upload_folder = app.config.get("UPLOAD_FOLDER", "/tmp/uploads")
+    try:
+        os.makedirs(upload_folder, exist_ok=True)
+    except OSError as e:
+        return jsonify({"error": f"Cannot write to upload directory: {e}"}), 500
+
+    filepath = os.path.join(upload_folder, unique_name)
     file.save(filepath)
     rel_url = f"/static/images/uploads/{unique_name}"
     return jsonify({"success": True, "url": rel_url})
+
 
 # --- Health check ---
 @app.route("/api/health")
